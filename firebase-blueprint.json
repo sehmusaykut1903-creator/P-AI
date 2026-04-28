@@ -1,0 +1,104 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Athlete's personal data and mental baseline.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "surname": { "type": "string" },
+        "email": { "type": "string" },
+        "athleteLevel": { "type": "string", "enum": ["Amateur", "Professional", "Elite"] },
+        "baselineHRV": { "type": "number" },
+        "preferredLanguage": { "type": "string" },
+        "theme": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "email"]
+    },
+    "MetricData": {
+      "title": "Metric Data",
+      "description": "Daily physiological and mood metrics.",
+      "type": "object",
+      "properties": {
+        "timestamp": { "type": "string", "format": "date-time" },
+        "hrv": { "type": "number" },
+        "sleepHours": { "type": "number" },
+        "restingHR": { "type": "number" },
+        "activityLevel": { "type": "number" },
+        "moodScore": { "type": "number" },
+        "energyScore": { "type": "number" }
+      },
+      "required": ["timestamp"]
+    },
+    "SurveyData": {
+      "title": "Survey Data",
+      "description": "Psychological survey responses.",
+      "type": "object",
+      "properties": {
+        "timestamp": { "type": "string", "format": "date-time" },
+        "responses": {
+          "type": "object",
+          "properties": {
+            "mood": { "type": "number" },
+            "energy": { "type": "number" },
+            "sleepQuality": { "type": "number" },
+            "irritability": { "type": "number" },
+            "thoughtSpeed": { "type": "number" },
+            "motivation": { "type": "number" }
+          }
+        }
+      },
+      "required": ["timestamp", "responses"]
+    },
+    "AIInsight": {
+      "title": "AI Insight",
+      "description": "AI-generated mental performance reports and risk assessments.",
+      "type": "object",
+      "properties": {
+        "timestamp": { "type": "string", "format": "date-time" },
+        "type": { "type": "string", "enum": ["daily", "weekly", "risk_alert"] },
+        "riskScore": { "type": "number" },
+        "reportText": { "type": "string" },
+        "recommendations": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["timestamp", "reportText"]
+    },
+    "GameScore": {
+      "title": "Game Score",
+      "description": "Performance results from Mind Lab games.",
+      "type": "object",
+      "properties": {
+        "gameId": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "score": { "type": "number" },
+        "difficulty": { "type": "string" }
+      },
+      "required": ["gameId", "timestamp", "score"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Root user document."
+    },
+    "/users/{userId}/metrics/{metricId}": {
+      "schema": "MetricData",
+      "description": "Daily vitals and baseline tracking."
+    },
+    "/users/{userId}/surveys/{surveyId}": {
+      "schema": "SurveyData",
+      "description": "Daily psychological surveys."
+    },
+    "/users/{userId}/ai_insights/{insightId}": {
+      "schema": "AIInsight",
+      "description": "AI-generated performance reports."
+    },
+    "/users/{userId}/game_scores/{gameId}": {
+      "schema": "GameScore",
+      "description": "Mind Lab training results."
+    }
+  }
+}

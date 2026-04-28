@@ -1,0 +1,107 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Validation Blueprints ---
+
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['userId', 'name', 'email']) 
+        && data.userId == request.auth.uid
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && data.email is string && data.email.size() <= 100
+        && (!('athleteLevel' in data) || data.athleteLevel in ['Amateur', 'Professional', 'Elite'])
+        && (!('baselineHRV' in data) || data.baselineHRV is number)
+        && (!('bio' in data) || data.bio is string && data.bio.size() <= 1000)
+        && (!('createdAt' in data) || data.createdAt is string || data.createdAt is timestamp)
+        && (!('updatedAt' in data) || data.updatedAt is string || data.updatedAt is timestamp);
+    }
+
+    function isValidMetricData(data) {
+      return data.keys().hasAll(['timestamp'])
+        && data.timestamp is timestamp
+        && (!('hrv' in data) || data.hrv is number)
+        && (!('moodScore' in data) || data.moodScore is number);
+    }
+
+    function isValidSurveyData(data) {
+      return data.keys().hasAll(['timestamp', 'responses'])
+        && data.timestamp is timestamp
+        && data.responses is map;
+    }
+
+    function isValidAIInsight(data) {
+      return data.keys().hasAll(['timestamp', 'reportText'])
+        && data.timestamp is timestamp
+        && data.reportText is string && data.reportText.size() <= 10000;
+    }
+
+    function isValidGameScore(data) {
+      return data.keys().hasAll(['gameId', 'timestamp', 'score'])
+        && data.gameId is string
+        && data.timestamp is timestamp
+        && data.score is number;
+    }
+
+    // --- Collection Rules ---
+
+    // 1. Users
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUserProfile(incoming());
+      allow update: if isOwner(userId) 
+        && isValidUserProfile(incoming())
+        && incoming().userId == existing().userId
+        && incoming().email == existing().email;
+    }
+
+    // 2. Metrics
+    match /users/{userId}/metrics/{metricId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidMetricData(incoming()) && isValidId(metricId);
+      allow delete: if isOwner(userId);
+    }
+
+    // 3. Surveys
+    match /users/{userId}/surveys/{surveyId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidSurveyData(incoming()) && isValidId(surveyId);
+    }
+
+    // 4. AI Insights (System generated, but allowed to be read by user)
+    match /users/{userId}/ai_insights/{insightId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidAIInsight(incoming());
+    }
+
+    // 5. Game Scores
+    match /users/{userId}/game_scores/{scoreId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidGameScore(incoming()) && isValidId(scoreId);
+    }
+  }
+}
